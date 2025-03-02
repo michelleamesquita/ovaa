@@ -25,13 +25,24 @@ jobs:
 
       - name: Inject RASP Dependency into build.gradle
         run: |
-          echo "Adicionando repositório Maven Central..."
-          sed -i '/repositories {/a \
-              mavenCentral()' app/build.gradle.kts
+          if [ -f "app/build.gradle.kts" ]; then
+            echo "Adicionando dependência no app/build.gradle.kts..."
+            sed -i '/repositories {/a \
+                mavenCentral()' app/build.gradle.kts
 
-          echo "Adicionando dependência do Android RASP..."
-          sed -i '/dependencies {/a \
-              implementation("com.securevale:rasp-android:0.1.0")' app/build.gradle.kts
+            sed -i '/dependencies {/a \
+                implementation("com.securevale:rasp-android:0.1.0")' app/build.gradle.kts
+          elif [ -f "app/build.gradle" ]; then
+            echo "Adicionando dependência no app/build.gradle..."
+            sed -i '/repositories {/a \
+                mavenCentral()' app/build.gradle
+
+            sed -i '/dependencies {/a \
+                implementation "com.securevale:rasp-android:0.1.0"' app/build.gradle
+          else
+            echo "Erro: Nenhum build.gradle encontrado!"
+            exit 1
+          fi
 
       - name: Grant execute permission for Gradle
         run: chmod +x ./gradlew
