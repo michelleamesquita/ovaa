@@ -1,0 +1,48 @@
+name: Android Build with RASP
+
+on:
+  push:
+    branches:
+      - main
+
+
+jobs:
+  build:
+    name: Build APK with RASP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Clone Android RASP repository
+        run: |
+          git clone https://github.com/securevale/android-rasp.git
+          mkdir -p app/rasp  # Garante que o diretório existe
+          mv android-rasp/* app/rasp/  # Move os arquivos do Android RASP para dentro do projeto
+
+      - name: Inject RASP Code into MainActivity
+        run: |
+          chmod +x ./inject_rasp.sh
+          ./inject_rasp.sh
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant execute permission for Gradle
+        run: chmod +x ./gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ovaa-app
+          path: app/build/outputs/apk/debug/app-debug.apk
