@@ -7,8 +7,8 @@ MAIN_ACTIVITY="app/src/main/java/oversecured/ovaa/activities/MainActivity.java"
 if [ -f "$MAIN_ACTIVITY" ]; then
     echo "Modificando MainActivity.java para incluir RASP..."
 
-    # Adiciona importação do Android RASP
-    sed -i '/import android.os.Bundle;/a import securevale.rasp.RASP;' $MAIN_ACTIVITY
+    # Adiciona importações do Android RASP e Toast
+    sed -i '/import android.os.Bundle;/a import securevale.rasp.RASP;\nimport android.widget.Toast;' $MAIN_ACTIVITY
 
     # Adiciona código dentro do onCreate para verificar root e emulador
     sed -i '/setContentView(R.layout.activity_main);/a \
