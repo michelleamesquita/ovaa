@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   build:
@@ -17,16 +14,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Clone Android RASP repository
-        run: |
-          git clone https://github.com/securevale/android-rasp.git rasp
-          mkdir -p app/rasp  # Garante que o diretório existe
-          mv rasp/* app/rasp/  # Move os arquivos do Android RASP para dentro do projeto
-
       - name: Inject RASP Dependency into build.gradle
         run: |
+          echo "Adicionando repositório Maven Central..."
+          sed -i '/repositories {/a \
+              mavenCentral()' app/build.gradle
+
+          echo "Adicionando dependência do Android RASP..."
           sed -i '/dependencies {/a \
-              implementation project(\x27:rasp\x27)' app/build.gradle
+              implementation \x27com.securevale:rasp-android:1.0.0\x27' app/build.gradle
 
       - name: Inject RASP Code into MainActivity
         run: |
