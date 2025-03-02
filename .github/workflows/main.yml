@@ -3,7 +3,7 @@ name: Android Build with RASP
 on:
   push:
     branches:
-      - main
+      - master
 
 
 jobs:
