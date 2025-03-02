@@ -3,8 +3,10 @@ name: Android Build with RASP
 on:
   push:
     branches:
-      - master
-
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
@@ -17,9 +19,14 @@ jobs:
 
       - name: Clone Android RASP repository
         run: |
-          git clone https://github.com/securevale/android-rasp.git
+          git clone https://github.com/securevale/android-rasp.git rasp
           mkdir -p app/rasp  # Garante que o diretório existe
-          mv android-rasp/* app/rasp/  # Move os arquivos do Android RASP para dentro do projeto
+          mv rasp/* app/rasp/  # Move os arquivos do Android RASP para dentro do projeto
+
+      - name: Inject RASP Dependency into build.gradle
+        run: |
+          sed -i '/dependencies {/a \
+              implementation project(\x27:rasp\x27)' app/build.gradle
 
       - name: Inject RASP Code into MainActivity
         run: |
