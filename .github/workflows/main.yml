@@ -38,7 +38,7 @@ jobs:
   security_scan:
     name: MobSF Security Scan
     runs-on: ubuntu-latest
-    needs: build  # Só roda após o build do APK
+    needs: build
 
     steps:
       - name: Download APK from Build
@@ -55,10 +55,11 @@ jobs:
 
           echo "Enviando APK para análise no MobSF..."
           RESPONSE=$(curl -X POST "$MOBS_URL" -H "Authorization: $API_KEY" -F "file=@$APK_FILE")
+
           SCAN_ID=$(echo $RESPONSE | jq -r '.hash')
 
-          if [ -z "$SCAN_ID" ]; then
-            echo "Erro ao enviar o APK para análise!"
+          if [ -z "$SCAN_ID" ] || [ "$SCAN_ID" == "null" ]; then
+            echo "Erro ao enviar o APK para análise! Resposta do servidor: $RESPONSE"
             exit 1
           fi
 
@@ -67,11 +68,11 @@ jobs:
 
       - name: Obter Relatório do MobSF
         run: |
-          REPORT_URL="{{ secrets.AWS_MOBSF_IP }}/api/v1/report_json"
+          REPORT_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/report_json"
           API_KEY="${{ secrets.MOBSF_API_KEY }}"
 
           echo "Obtendo relatório de análise..."
-          curl -X POST "$REPORT_URL" -H "Authorization: $API_KEY" -H "Content-Type: application/json" -d '{"hash": "'"$SCAN_ID"'"}' -o mobsf_report.json
+          curl -X POST "$REPORT_URL" -H "Authorization: $API_KEY" -H "Content-Type: application/json" -d "{\"hash\": \"$SCAN_ID\"}" -o mobsf_report.json
 
       - name: Upload Security Report
         uses: actions/upload-artifact@v4
