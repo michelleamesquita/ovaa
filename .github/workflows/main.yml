@@ -1,4 +1,4 @@
-name: Android Build with RASP
+name: Android Build & MobSF Scan
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build APK with RASP
+    name: Build APK & Scan with MobSF
     runs-on: ubuntu-latest
 
     steps:
@@ -23,27 +23,6 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Inject RASP Dependency into build.gradle
-        run: |
-          if [ -f "app/build.gradle.kts" ]; then
-            echo "Adicionando dependência no app/build.gradle.kts..."
-            sed -i '/repositories {/a \
-                mavenCentral()' app/build.gradle.kts
-
-            sed -i '/dependencies {/a \
-                implementation("com.securevale:rasp-android:0.1.0")' app/build.gradle.kts
-          elif [ -f "app/build.gradle" ]; then
-            echo "Adicionando dependência no app/build.gradle..."
-            sed -i '/repositories {/a \
-                mavenCentral()' app/build.gradle
-
-            sed -i '/dependencies {/a \
-                implementation "com.securevale:rasp-android:0.1.0"' app/build.gradle
-          else
-            echo "Erro: Nenhum build.gradle encontrado!"
-            exit 1
-          fi
-
       - name: Grant execute permission for Gradle
         run: chmod +x ./gradlew
 
@@ -55,3 +34,47 @@ jobs:
         with:
           name: ovaa-app
           path: app/build/outputs/apk/debug/app-debug.apk
+
+  security_scan:
+    name: MobSF Security Scan
+    runs-on: ubuntu-latest
+    needs: build  # Só roda após o build do APK
+
+    steps:
+      - name: Download APK from Build
+        uses: actions/download-artifact@v4
+        with:
+          name: ovaa-app
+          path: app/build/outputs/apk/debug/
+
+      - name: Upload APK to MobSF API
+        run: |
+          APK_FILE="app/build/outputs/apk/debug/app-debug.apk"
+          MOBS_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/upload"
+          API_KEY="${{ secrets.MOBSF_API_KEY }}"
+
+          echo "Enviando APK para análise no MobSF..."
+          RESPONSE=$(curl -X POST "$MOBS_URL" -H "Authorization: $API_KEY" -F "file=@$APK_FILE")
+          SCAN_ID=$(echo $RESPONSE | jq -r '.hash')
+
+          if [ -z "$SCAN_ID" ]; then
+            echo "Erro ao enviar o APK para análise!"
+            exit 1
+          fi
+
+          echo "Análise iniciada com ID: $SCAN_ID"
+          echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
+
+      - name: Obter Relatório do MobSF
+        run: |
+          REPORT_URL="{{ secrets.AWS_MOBSF_IP }}/api/v1/report_json"
+          API_KEY="${{ secrets.MOBSF_API_KEY }}"
+
+          echo "Obtendo relatório de análise..."
+          curl -X POST "$REPORT_URL" -H "Authorization: $API_KEY" -H "Content-Type: application/json" -d '{"hash": "'"$SCAN_ID"'"}' -o mobsf_report.json
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: MobSF-Report
+          path: mobsf_report.json
