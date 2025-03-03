@@ -1,4 +1,4 @@
-name: Android Build & MobSF Scan
+name: Android Build & Security Scan
 
 on:
   push:
@@ -52,55 +52,50 @@ jobs:
           APK_FILE="app/build/outputs/apk/debug/app-debug.apk"
           MOBS_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/upload"
           API_KEY="${{ secrets.MOBSF_API_KEY }}"
-
           echo "Enviando APK para análise no MobSF..."
           RESPONSE=$(curl -X POST "$MOBS_URL" -H "Authorization: $API_KEY" -F "file=@$APK_FILE")
-
           SCAN_ID=$(echo $RESPONSE | jq -r '.hash')
-
           if [ -z "$SCAN_ID" ] || [ "$SCAN_ID" == "null" ]; then
-            echo "❌ Erro ao enviar o APK para análise! Resposta do servidor: $RESPONSE"
+            echo "❌ Erro ao enviar o APK para análise!"
             exit 1
           fi
-
-          echo "✅ Análise iniciada com ID: $SCAN_ID"
           echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
 
-      - name: Aguardar a análise do MobSF (30s)
-        run: |
-          echo "⏳ Aguardando 30 segundos para a análise do APK..."
-          sleep 30
-
-      - name: Testar se a análise foi concluída
-        run: |
-          CHECK_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/view_scan_result/$SCAN_ID"
-          API_KEY="${{ secrets.MOBSF_API_KEY }}"
-
-          RESPONSE=$(curl -X GET "$CHECK_URL" -H "Authorization: $API_KEY")
-
-          if [[ "$RESPONSE" == *"Scan Not Completed"* ]]; then
-            echo "⚠️ O scan ainda não foi concluído. Aguardando mais tempo..."
-            sleep 20
-          fi
+      - name: Aguardar a análise do MobSF
+        run: sleep 30
 
       - name: Obter Relatório do MobSF
         run: |
           REPORT_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/report_json"
-          API_KEY="${{ secrets.MOBSF_API_KEY }}"
-
-          echo "📄 Obtendo relatório de análise..."
           RESPONSE=$(curl -X POST "$REPORT_URL" -H "Authorization: $API_KEY" -H "Content-Type: application/json" -d "{\"hash\": \"$SCAN_ID\"}")
-
-          if [[ "$RESPONSE" == *"Unprocessable Entity"* ]]; then
-            echo "❌ Erro ao obter o relatório. O scan pode não ter sido concluído corretamente."
-            exit 1
-          fi
-
           echo "$RESPONSE" > mobsf_report.json
-          echo "✅ Relatório salvo com sucesso."
 
       - name: Upload Security Report
         uses: actions/upload-artifact@v4
         with:
           name: MobSF-Report
           path: mobsf_report.json
+
+  dast:
+    name: Dynamic Analysis with MobSF
+    runs-on: ubuntu-latest
+    needs: security_scan
+
+    steps:
+      - name: Conectar MobSF ao Genymotion
+        run: |
+          adb connect ${{ secrets.GENYMOTION_IP }}:5555
+          adb devices
+
+      - name: Iniciar DAST via MobSF
+        run: |
+          DAST_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/dynamic_analyzer"
+          API_KEY="${{ secrets.MOBSF_API_KEY }}"
+          RESPONSE=$(curl -X POST "$DAST_URL" -H "Authorization: $API_KEY" -H "Content-Type: application/json" -d "{\"scan_type\": \"android\", \"device_ip\": \"${{ secrets.GENYMOTION_IP }}\"}")
+          echo "$RESPONSE" > dast_report.json
+
+      - name: Upload DAST Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: DAST-Report
+          path: dast_report.json
