@@ -112,3 +112,40 @@ jobs:
         with:
           name: MobSF-Report
           path: mobsf_report.json
+
+      - name: Obter Relatório da Análise Estática (PDF)
+        run: |
+          PDF_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/download_pdf"
+          RESPONSE=$(curl -X POST "$PDF_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID" --output mobsf_static_report.pdf)
+          if [[ ! -f mobsf_static_report.pdf ]]; then
+            echo "❌ Erro ao baixar o PDF da análise estática"
+            exit 1
+          fi
+          echo "PDF da análise estática baixado com sucesso."
+
+      - name: Upload Relatório Estático (PDF)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MobSF-Static-PDF-Report
+          path: mobsf_static_report.pdf
+
+  dast:
+    name: Dynamic Analysis with MobSF
+    runs-on: ubuntu-latest
+    needs: security_scan
+
+    steps:
+      - name: Iniciar análise dinâmica com o Hash
+        run: |
+          DAST_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/dynamic/start_analysis"
+          API_KEY="${{ secrets.MOBSF_API_KEY }}"
+          echo "Iniciando análise dinâmica no MobSF..."
+          RESPONSE=$(curl -X POST "$DAST_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID")
+          if [[ "$RESPONSE" == *"error"* ]]; then
+            echo "❌ Erro ao iniciar a análise dinâmica: $RESPONSE"
+            exit 1
+          fi
+          echo "$RESPONSE" > dast_report.json
+
+      - name: Upload Relatório da Análise Dinâmica (JSON)
+       
