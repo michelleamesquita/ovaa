@@ -81,8 +81,21 @@ jobs:
             exit 1
           fi
           echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
+
+      - name: Iniciar análise com o Hash
+        run: |
+          ANALYSIS_URL="http://98.82.35.172:8000/api/v1/scan"
+          API_KEY="${{ secrets.MOBSF_API_KEY }}"
+          echo "Iniciando análise no MobSF..."
+          RESPONSE=$(curl -X POST "$ANALYSIS_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID")
+          if [[ "$RESPONSE" == *"error"* ]]; then
+            echo "❌ Erro ao iniciar a análise: $RESPONSE"
+            exit 1
+          fi
+          echo "Análise iniciada com sucesso."
+
       - name: Aguardar a análise do MobSF
-        run: sleep 60  # Aumentei o tempo de espera para garantir que a análise tenha tempo suficiente
+        run: sleep 60  # Aumente o tempo de espera para garantir que a análise seja concluída
 
       - name: Obter Relatório do MobSF
         run: |
@@ -93,57 +106,9 @@ jobs:
             exit 1
           fi
           echo "$RESPONSE" > mobsf_report.json
+
       - name: Upload Security Report
         uses: actions/upload-artifact@v4
         with:
           name: MobSF-Report
           path: mobsf_report.json
-
-  download_pdf:
-    name: Download PDF Report
-    runs-on: ubuntu-latest
-    needs: security_scan
-
-    steps:
-      - name: Download PDF from MobSF
-        run: |
-          PDF_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/download_pdf"
-          API_KEY="${{ secrets.MOBSF_API_KEY }}"
-          echo "Baixando PDF do relatório..."
-          RESPONSE=$(curl -X POST "$PDF_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID" --output mobsf_report.pdf)
-          
-          if [[ ! -f mobsf_report.pdf ]]; then
-            echo "❌ Erro ao baixar o PDF"
-            exit 1
-          fi
-          
-          echo "PDF baixado com sucesso."
-      - name: Upload PDF Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MobSF-PDF-Report
-          path: mobsf_report.pdf
-
-  dast:
-    name: Dynamic Analysis with MobSF
-    runs-on: ubuntu-latest
-    needs: security_scan
-
-    steps:
-
-      - name: Iniciar DAST via MobSF
-        run: |
-          DAST_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/dynamic/start_analysis"
-          API_KEY="${{ secrets.MOBSF_API_KEY }}"
-          RESPONSE=$(curl -X POST "$DAST_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID")
-          if [[ "$RESPONSE" == *"error"* ]]; then
-            echo "❌ Erro ao iniciar a análise dinâmica: $RESPONSE"
-            exit 1
-          fi
-          echo "$RESPONSE" > dast_report.json
-          
-      - name: Upload DAST Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: DAST-Report
-          path: dast_report.json
