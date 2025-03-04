@@ -18,6 +18,8 @@ import oversecured.ovaa.utils.IntentUtils;
 import oversecured.ovaa.utils.LoginUtils;
 import oversecured.ovaa.utils.WeakCrypto;
 
+import android.util.Log;
+
 public class MainActivity extends AppCompatActivity {
     private static final int PICK_CODE = 1001;
     private static final int PERMISSIONS_CODE = 1002;
