@@ -90,18 +90,6 @@ jobs:
           RESPONSE=$(curl -X POST "$ANALYSIS_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID")
           echo "Análise estática iniciada. Aguardando conclusão..."
 
-          # Aguarda até que a análise esteja completa
-          STATUS_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/status?hash=$SCAN_ID"
-          while true; do
-            STATUS=$(curl -X GET "$STATUS_URL" -H "Authorization: $API_KEY" | jq -r '.scan_progress')
-            echo "Progresso da análise: $STATUS%"
-            if [ "$STATUS" == "100" ]; then
-              echo "✅ Análise estática concluída!"
-              break
-            fi
-            sleep 10
-          done
-
       - name: Obter Relatório do MobSF
         run: |
           REPORT_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/report_json"
@@ -115,16 +103,22 @@ jobs:
           name: MobSF-Report
           path: mobsf_report.json
 
-      - name: Obter Relatório da Análise Estática (PDF)
+      - name: Aguardar até que o relatório da análise estática esteja pronto
         run: |
           PDF_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/download_pdf"
           API_KEY="${{ secrets.MOBSF_API_KEY }}"
-          RESPONSE=$(curl -X POST "$PDF_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID" --output mobsf_static_report.pdf)
-          if [[ ! -f mobsf_static_report.pdf ]]; then
-            echo "❌ Erro ao baixar o PDF da análise estática"
-            exit 1
-          fi
-          echo "PDF da análise estática baixado com sucesso."
+          
+          echo "Aguardando o relatório da análise estática ficar disponível..."
+          
+          while true; do
+            RESPONSE=$(curl -X POST "$PDF_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID" --silent --output mobsf_static_report.pdf --write-out "%{http_code}")
+            if [[ -f mobsf_static_report.pdf ]]; then
+              echo "✅ Relatório da análise estática disponível!"
+              break
+            fi
+            echo "⏳ Relatório ainda não disponível, aguardando..."
+            sleep 10
+          done
 
       - name: Upload Relatório Estático (PDF)
         uses: actions/upload-artifact@v4
