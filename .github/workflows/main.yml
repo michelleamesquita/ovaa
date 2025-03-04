@@ -94,9 +94,6 @@ jobs:
           # fi
           echo "Análise iniciada com sucesso."
 
-      - name: Aguardar a análise do MobSF
-        run: sleep 180  
-
       - name: Obter Relatório do MobSF
         run: |
           REPORT_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/report_json"
@@ -140,15 +137,13 @@ jobs:
           #   exit 1
           # fi
           echo "$RESPONSE" > dast_report.json
+          echo "Análise iniciada com sucesso."
 
       - name: Upload Relatório da Análise Dinâmica (JSON)
         uses: actions/upload-artifact@v4
         with:
           name: DAST-Report
-          path: dast_report.json
-
-      - name: Aguardar a análise dinâmica do MobSF
-        run: sleep 180 
+          path: dast_report.json 
 
       - name: Obter Relatório da Análise Dinâmica (PDF)
         run: |
