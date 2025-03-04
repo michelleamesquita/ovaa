@@ -2,7 +2,7 @@ name: Android Build & Security Scan
 
 on:
   push:
-    branches:
+    branches: 
       - master
 
 jobs:
