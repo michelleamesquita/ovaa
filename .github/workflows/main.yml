@@ -82,6 +82,13 @@ jobs:
     needs: security_scan
 
     steps:
+
+      - name: Instalar ADB
+        run: sudo apt update && sudo apt install -y adb
+
+      - name: Verificar ADB
+        run: adb version
+        
       - name: Conectar MobSF ao Genymotion
         run: |
           adb connect ${{ secrets.GENYMOTION_IP }}:5555
