@@ -23,6 +23,27 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Inject RASP Dependency into build.gradle
+        run: |
+          if [ -f "app/build.gradle.kts" ]; then
+            echo "Adicionando dependência no app/build.gradle.kts..."
+            sed -i '/repositories {/a \
+                mavenCentral()' app/build.gradle.kts
+
+            sed -i '/dependencies {/a \
+                implementation("com.securevale:rasp-android:0.1.0")' app/build.gradle.kts
+          elif [ -f "app/build.gradle" ]; then
+            echo "Adicionando dependência no app/build.gradle..."
+            sed -i '/repositories {/a \
+                mavenCentral()' app/build.gradle
+
+            sed -i '/dependencies {/a \
+                implementation "com.securevale:rasp-android:0.1.0"' app/build.gradle
+          else
+            echo "Erro: Nenhum build.gradle encontrado!"
+            exit 1
+          fi
+
       - name: Grant execute permission for Gradle
         run: chmod +x ./gradlew
 
@@ -60,21 +81,48 @@ jobs:
             exit 1
           fi
           echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
-
       - name: Aguardar a análise do MobSF
-        run: sleep 30
+        run: sleep 60  # Aumentei o tempo de espera para garantir que a análise tenha tempo suficiente
 
       - name: Obter Relatório do MobSF
         run: |
           REPORT_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/report_json"
-          RESPONSE=$(curl -X POST "$REPORT_URL" -H "Authorization: $API_KEY" -H "Content-Type: application/json" -d "{\"hash\": \"$SCAN_ID\"}")
+          RESPONSE=$(curl -X POST "$REPORT_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID")
+          if [[ "$RESPONSE" == *"error"* ]]; then
+            echo "❌ Erro ao obter o relatório da análise: $RESPONSE"
+            exit 1
+          fi
           echo "$RESPONSE" > mobsf_report.json
-
       - name: Upload Security Report
         uses: actions/upload-artifact@v4
         with:
           name: MobSF-Report
           path: mobsf_report.json
+
+  download_pdf:
+    name: Download PDF Report
+    runs-on: ubuntu-latest
+    needs: security_scan
+
+    steps:
+      - name: Download PDF from MobSF
+        run: |
+          PDF_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/download_pdf"
+          API_KEY="${{ secrets.MOBSF_API_KEY }}"
+          echo "Baixando PDF do relatório..."
+          RESPONSE=$(curl -X POST "$PDF_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID" --output mobsf_report.pdf)
+          
+          if [[ ! -f mobsf_report.pdf ]]; then
+            echo "❌ Erro ao baixar o PDF"
+            exit 1
+          fi
+          
+          echo "PDF baixado com sucesso."
+      - name: Upload PDF Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MobSF-PDF-Report
+          path: mobsf_report.pdf
 
   dast:
     name: Dynamic Analysis with MobSF
@@ -83,24 +131,17 @@ jobs:
 
     steps:
 
-      - name: Instalar ADB
-        run: sudo apt update && sudo apt install -y adb
-
-      - name: Verificar ADB
-        run: adb version
-        
-      - name: Conectar MobSF ao Genymotion
-        run: |
-          adb connect ${{ secrets.GENYMOTION_IP }}:5555
-          adb devices
-
       - name: Iniciar DAST via MobSF
         run: |
-          DAST_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/dynamic_analyzer"
+          DAST_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/dynamic/start_analysis"
           API_KEY="${{ secrets.MOBSF_API_KEY }}"
-          RESPONSE=$(curl -X POST "$DAST_URL" -H "Authorization: $API_KEY" -H "Content-Type: application/json" -d "{\"scan_type\": \"android\", \"device_ip\": \"${{ secrets.GENYMOTION_IP }}\"}")
+          RESPONSE=$(curl -X POST "$DAST_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID")
+          if [[ "$RESPONSE" == *"error"* ]]; then
+            echo "❌ Erro ao iniciar a análise dinâmica: $RESPONSE"
+            exit 1
+          fi
           echo "$RESPONSE" > dast_report.json
-
+          
       - name: Upload DAST Report
         uses: actions/upload-artifact@v4
         with:
