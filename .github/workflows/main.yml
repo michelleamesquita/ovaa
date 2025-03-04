@@ -95,7 +95,7 @@ jobs:
           echo "Análise iniciada com sucesso."
 
       - name: Aguardar a análise do MobSF
-        run: sleep 60  # Aumente o tempo de espera para garantir que a análise seja concluída
+        run: sleep 180  
 
       - name: Obter Relatório do MobSF
         run: |
@@ -129,7 +129,6 @@ jobs:
           name: MobSF-Static-PDF-Report
           path: mobsf_static_report.pdf
 
-
       - name: Iniciar análise dinâmica com o Hash
         run: |
           DAST_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/dynamic/start_analysis"
@@ -145,6 +144,24 @@ jobs:
       - name: Upload Relatório da Análise Dinâmica (JSON)
         uses: actions/upload-artifact@v4
         with:
-          name: DAST-PDF-Report
-          path: dast_report.pdf
-       
+          name: DAST-Report
+          path: dast_report.json
+
+      - name: Aguardar a análise dinâmica do MobSF
+        run: sleep 180 
+
+      - name: Obter Relatório da Análise Dinâmica (PDF)
+        run: |
+          DAST_PDF_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/download_pdf"
+          RESPONSE=$(curl -X POST "$DAST_PDF_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID" --output dast_dynamic_report.pdf)
+          if [[ ! -f dast_dynamic_report.pdf ]]; then
+            echo "❌ Erro ao baixar o PDF da análise dinâmica"
+            exit 1
+          fi
+          echo "PDF da análise dinâmica baixado com sucesso."
+
+      - name: Upload Relatório da Análise Dinâmica (PDF)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DAST-Dynamic-PDF-Report
+          path: dast_dynamic_report.pdf
