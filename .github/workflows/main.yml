@@ -82,26 +82,31 @@ jobs:
           fi
           echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
 
-      - name: Iniciar análise com o Hash
+      - name: Iniciar análise estática com o Hash
         run: |
-          ANALYSIS_URL="http://98.82.35.172:8000/api/v1/scan"
+          ANALYSIS_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/scan"
           API_KEY="${{ secrets.MOBSF_API_KEY }}"
-          echo "Iniciando análise no MobSF..."
+          echo "Iniciando análise estática no MobSF..."
           RESPONSE=$(curl -X POST "$ANALYSIS_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID")
-          # if [[ "$RESPONSE" == *"error"* ]]; then
-          #   echo "❌ Erro ao iniciar a análise: $RESPONSE"
-          #   exit 1
-          # fi
-          echo "Análise iniciada com sucesso."
+          echo "Análise estática iniciada. Aguardando conclusão..."
+
+          # Aguarda até que a análise esteja completa
+          STATUS_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/status?hash=$SCAN_ID"
+          while true; do
+            STATUS=$(curl -X GET "$STATUS_URL" -H "Authorization: $API_KEY" | jq -r '.scan_progress')
+            echo "Progresso da análise: $STATUS%"
+            if [ "$STATUS" == "100" ]; then
+              echo "✅ Análise estática concluída!"
+              break
+            fi
+            sleep 10
+          done
 
       - name: Obter Relatório do MobSF
         run: |
           REPORT_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/report_json"
+          API_KEY="${{ secrets.MOBSF_API_KEY }}"
           RESPONSE=$(curl -X POST "$REPORT_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID")
-          # if [[ "$RESPONSE" == *"error"* ]]; then
-          #   echo "❌ Erro ao obter o relatório da análise: $RESPONSE"
-          #   exit 1
-          # fi
           echo "$RESPONSE" > mobsf_report.json
 
       - name: Upload Security Report
@@ -113,6 +118,7 @@ jobs:
       - name: Obter Relatório da Análise Estática (PDF)
         run: |
           PDF_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/download_pdf"
+          API_KEY="${{ secrets.MOBSF_API_KEY }}"
           RESPONSE=$(curl -X POST "$PDF_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID" --output mobsf_static_report.pdf)
           if [[ ! -f mobsf_static_report.pdf ]]; then
             echo "❌ Erro ao baixar o PDF da análise estática"
@@ -132,22 +138,19 @@ jobs:
           API_KEY="${{ secrets.MOBSF_API_KEY }}"
           echo "Iniciando análise dinâmica no MobSF..."
           RESPONSE=$(curl -X POST "$DAST_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID")
-          # if [[ "$RESPONSE" == *"error"* ]]; then
-          #   echo "❌ Erro ao iniciar a análise dinâmica: $RESPONSE"
-          #   exit 1
-          # fi
           echo "$RESPONSE" > dast_report.json
-          echo "Análise iniciada com sucesso."
+          echo "Análise dinâmica iniciada com sucesso."
 
       - name: Upload Relatório da Análise Dinâmica (JSON)
         uses: actions/upload-artifact@v4
         with:
           name: DAST-Report
-          path: dast_report.json 
+          path: dast_report.json
 
       - name: Obter Relatório da Análise Dinâmica (PDF)
         run: |
           DAST_PDF_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/download_pdf"
+          API_KEY="${{ secrets.MOBSF_API_KEY }}"
           RESPONSE=$(curl -X POST "$DAST_PDF_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID" --output dast_dynamic_report.pdf)
           if [[ ! -f dast_dynamic_report.pdf ]]; then
             echo "❌ Erro ao baixar o PDF da análise dinâmica"
