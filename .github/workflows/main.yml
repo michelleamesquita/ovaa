@@ -55,6 +55,45 @@ jobs:
         with:
           name: ovaa-app
           path: app/build/outputs/apk/debug/app-debug.apk
+  
+  test_proguard:
+    name: Teste de Ofuscação do ProGuard
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Baixar APK de Release
+        uses: actions/download-artifact@v4
+        with:
+          name: ovaa-app
+          path: app/build/outputs/apk/release/
+
+      - name: Verificar se ProGuard está Ativo
+        run: |
+          APK_FILE="app/build/outputs/apk/release/app-release.apk"
+          MAPPING_FILE="app/build/outputs/mapping/release/mapping.txt"
+
+          if [ ! -f "$MAPPING_FILE" ]; then
+            echo "❌ ERRO: O arquivo mapping.txt não foi gerado! ProGuard pode não estar ativo."
+            exit 1
+          fi
+
+          echo "✅ ProGuard está ativo. Verificando a ofuscação do código..."
+
+          # Verifica se a classe de teste foi ofuscada
+          if grep -q "oversecured.ovaa.utils.ProGuardCheck" "$MAPPING_FILE"; then
+            echo "❌ ERRO: A classe ProGuardCheck NÃO foi ofuscada! ProGuard pode estar desativado."
+            exit 1
+          else
+            echo "✅ O código foi ofuscado corretamente!"
+          fi
+
+      - name: Upload Mapping File
+        uses: actions/upload-artifact@v4
+        with:
+          name: ProGuard-Mapping
+          path: app/build/outputs/mapping/release/mapping.txt
+
 
   security_scan:
     name: MobSF Security Scan

@@ -4,29 +4,45 @@ plugins {
 
 android {
     compileSdk 34
+    namespace 'oversecured.ovaa'
+
     defaultConfig {
         applicationId "oversecured.ovaa"
         minSdk 26
         targetSdk 34
         versionCode 1
         versionName "1.0"
+
+        // Garante que o BuildConfig seja gerado
+        buildConfigField "boolean", "DEBUG_MODE", "false"
     }
-    externalNativeBuild {
-        cmake {
-            path file('CMakeLists.txt')
+
+    buildFeatures {
+        buildConfig true // Garante que o BuildConfig.java seja gerado
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            buildConfigField "boolean", "DEBUG_MODE", "true"
         }
     }
+
     compileOptions {
-        targetCompatibility = 11
-        sourceCompatibility = 11
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
+
     lintOptions {
         checkReleaseBuilds false
         abortOnError false
     }
-    ndkVersion '27.0.11902837'
-    namespace 'oversecured.ovaa'
 }
+
 
 dependencies {
     implementation(platform("org.jetbrains.kotlin:kotlin-bom:1.8.0"))

@@ -1,5 +1,8 @@
 package oversecured.ovaa.activities;
 
+import oversecured.ovaa.BuildConfig;
+
+
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -35,6 +38,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (BuildConfig.DEBUG) {
+            Log.d("DEBUG_CHECK", "⚠️ O app está rodando em modo DEBUG!");
+        } else {
+            Log.d("DEBUG_CHECK", "✅ O app está rodando em modo RELEASE!");
+        }
 
         loginUtils = LoginUtils.getInstance(this);
 
