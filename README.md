@@ -1,4 +1,62 @@
 ## Description
+
+
+# 🔒 Segurança no Aplicativo - ProGuard, Debug e Root Detection
+
+Este projeto implementa diversas técnicas de segurança para **proteger contra engenharia reversa**, **detectar root e depuração**, além de **ativar a ofuscação de código com ProGuard**.
+
+---
+
+## 🚀 **Funcionalidades de Segurança Implementadas**
+✅ **ProGuard ativado** para ofuscação de código  
+✅ **Verificação de Debug (Prevenção de Análise)**  
+✅ **Detecção de Root (Bloqueio de dispositivos rooteados)**  
+✅ **Script para injetar segurança automaticamente**  
+
+---
+
+## 🔹 **1. Ativando o ProGuard (Ofuscação de Código)**
+
+O **ProGuard** está ativado para garantir que o código seja **ofuscado**, dificultando a engenharia reversa.
+
+📂 **Alterações no arquivo `app/build.gradle`**:
+```gradle
+buildTypes {
+    release {
+        minifyEnabled true  // 🔹 Ativa a ofuscação
+        shrinkResources true // 🔹 Remove recursos não utilizados
+        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    }
+}
+```
+
+📂 **Alterações no arquivo `proguard-rules.pro`**:
+
+# 🔒 Impede que classes de segurança sejam removidas
+-keep class oversecured.ovaa.activities.MainActivity { *; }
+
+# 🔒 Ofusca todas as classes do app, exceto as Activities
+-keep public class * extends android.app.Activity
+-dontwarn android.support.**
+
+📌 Como testar se o código foi ofuscado?
+Gere a versão release do APK:
+```
+./gradlew assembleRelease
+```
+Verifique o arquivo mapping.txt (gera os nomes ofuscados):
+```
+cat app/build/outputs/mapping/release/mapping.txt
+```
+
+🔹 2. Detecção de Debug (Proteção Contra Engenharia Reversa)
+O app detecta se está sendo executado em um dispositivo rooteado e encerra a execução caso positivo.
+
+📂 Alterações no MainActivity.java
+
+Aproveite 🛡✨
+
+###
 OVAA (Oversecured Vulnerable Android App) is an Android app that aggregates all the platform's known and popular security vulnerabilities.
 
 ## List of vulnerabilities
