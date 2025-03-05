@@ -64,7 +64,7 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
-      - name: Upload APK Artifact
+      - name: Upload Realase Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ovaa-app-release
