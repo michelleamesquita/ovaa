@@ -62,13 +62,13 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease -type f
 
       - name: Upload Realase Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ovaa-app-release
-          path: app/build/outputs/apk/release/app-release.apk
+          path: app/build/outputs/apk/release/*.apk
       
       - name: Upload Mapping File (ProGuard)
         uses: actions/upload-artifact@v4
