@@ -3,7 +3,7 @@
  
 # 🔒 Segurança no Aplicativo - ProGuard, Debug e Root Detection
 
-Este projeto implementa diversas técnicas de segurança para **proteger contra engenharia reversa**, **detectar root e depuração**, além de **ativar a ofuscação de código com ProGuard**.
+Este projeto implementa diversas técnicas de segurança para **proteger contra engenharia reversa**, **detectar root e depuração**, além de **ativar a ofuscação de código com ProGuard**. 
 
 ---
 
