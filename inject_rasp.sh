@@ -1,64 +1,79 @@
 #!/bin/bash
 
-# Caminho correto da MainActivity no Ovaa
+# Caminho correto do arquivo MainActivity no projeto
 MAIN_ACTIVITY="app/src/main/java/oversecured/ovaa/activities/MainActivity.java"
 
-# Verifica se o arquivo existe antes de modificar
-if [ -f "$MAIN_ACTIVITY" ]; then
-    echo "Modificando MainActivity.java para incluir RASP..."
+# Verifica se o arquivo MainActivity.java existe antes de modificar
+if [ ! -f "$MAIN_ACTIVITY" ]; then
+    echo "❌ ERRO: MainActivity.java não encontrado!"
+    exit 1
+fi
 
-    # Adiciona importações do Android RASP, Toast e Log
+echo "🛡️ Adicionando segurança ao MainActivity.java..."
+
+# 🔹 Adiciona importações necessárias (caso ainda não existam)
+if ! grep -q "import android.os.Debug;" "$MAIN_ACTIVITY"; then
     sed -i '/import android.os.Bundle;/a \
-    import com.securevale.rasp.android.api.SecureAppChecker;\n\
-    import com.securevale.rasp.android.api.result.Result;\n\
-    import android.widget.Toast;\n\
-    import android.util.Log;' $MAIN_ACTIVITY
+    import android.os.Debug;\n\
+    import java.io.BufferedReader;\n\
+    import java.io.File;\n\
+    import java.io.InputStreamReader;' "$MAIN_ACTIVITY"
+    echo "✅ Importações adicionadas!"
+else
+    echo "⚠️ Importações já existem, ignorando..."
+fi
 
-    # Adiciona método para verificação manual de root
+# 🔹 Adiciona a verificação de Debug dentro do onCreate()
+if ! grep -q "if (isDebugged())" "$MAIN_ACTIVITY"; then
+    sed -i '/setContentView(R.layout.activity_main);/a \
+        \n        if (isDebugged()) {\n\
+            Log.d("SECURITY_CHECK", "⚠️ Debugger detectado! Fechando app...");\n\
+            finish();\n\
+        }\n\
+        if (isDeviceRooted()) {\n\
+            Log.d("SECURITY_CHECK", "🔴 Dispositivo rooteado detectado!");\n\
+            finish();\n\
+        }' "$MAIN_ACTIVITY"
+    echo "✅ Verificação de Debug e Root adicionada no onCreate()!"
+else
+    echo "⚠️ Verificação de Debug e Root já existe, ignorando..."
+fi
+
+# 🔹 Adiciona o método de detecção de Debug (caso ainda não exista)
+if ! grep -q "private boolean isDebugged()" "$MAIN_ACTIVITY"; then
+    sed -i '/public class MainActivity extends AppCompatActivity {/a \
+    \n    private boolean isDebugged() {\n\
+        return Debug.isDebuggerConnected();\n\
+    }' "$MAIN_ACTIVITY"
+    echo "✅ Método isDebugged() adicionado!"
+else
+    echo "⚠️ Método isDebugged() já existe, ignorando..."
+fi
+
+# 🔹 Adiciona o método de detecção de Root (caso ainda não exista)
+if ! grep -q "private boolean isDeviceRooted()" "$MAIN_ACTIVITY"; then
     sed -i '/public class MainActivity extends AppCompatActivity {/a \
     \n    private boolean isDeviceRooted() {\n\
         String[] paths = {\n\
             "/system/bin/su", "/system/xbin/su", "/system/app/Superuser.apk", "/system/app/SuperSU.apk", "/system/xbin/daemonsu"\n\
         };\n\
         for (String path : paths) {\n\
-            if (new java.io.File(path).exists()) {\n\
+            if (new File(path).exists()) {\n\
                 return true;\n\
             }\n\
         }\n\
+        try {\n\
+            Process process = Runtime.getRuntime().exec(new String[]{"/system/xbin/which", "su"});\n\
+            BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()));\n\
+            if (in.readLine() != null) return true;\n\
+        } catch (Exception e) {\n\
+            return false;\n\
+        }\n\
         return false;\n\
-    }' $MAIN_ACTIVITY
-
-    # Adiciona inicialização do SecureApp dentro do onCreate
-    sed -i '/setContentView(R.layout.activity_main);/a \
-        \n        SecureApp.init();\n\
-        \n        boolean shouldCheckForEmulator = true;\n\
-        boolean shouldCheckForDebugger = true;\n\
-        boolean shouldCheckForRoot = true;\n\
-        \n        SecureAppChecker.Builder builder = new SecureAppChecker.Builder(\n\
-            this, shouldCheckForEmulator, shouldCheckForDebugger, shouldCheckForRoot\n\
-        );\n\
-        \n        SecureAppChecker check = builder.build();\n\
-        Result checkResult = check.check();\n\
-        \n        if (checkResult instanceof Result.EmulatorFound) {\n\
-            Log.d("SecureAppChecker", "⚠️ App rodando em um emulador!");\n\
-            Toast.makeText(this, \"App está rodando em um emulador!\", Toast.LENGTH_LONG).show();\n\
-            finish();\n\
-        } else if (checkResult instanceof Result.DebuggerEnabled) {\n\
-            Log.d("SecureAppChecker", "⚠️ App está em modo de depuração!");\n\
-            Toast.makeText(this, \"App está em modo de depuração!\", Toast.LENGTH_LONG).show();\n\
-            finish();\n\
-        } else if (checkResult instanceof Result.Rooted) {\n\
-            Log.d("SecureAppChecker", "🔴 Dispositivo rooteado detectado!");\n\
-            Toast.makeText(this, \"Dispositivo rooteado!\", Toast.LENGTH_LONG).show();\n\
-            finish();\n\
-        } else if (isDeviceRooted()) {\n\
-            Log.d("RootCheck", "🔴 Dispositivo rooteado detectado pelo método manual!");\n\
-            Toast.makeText(this, \"Dispositivo rooteado! (verificação manual)\", Toast.LENGTH_LONG).show();\n\
-            finish();\n\
-        }' $MAIN_ACTIVITY
-
-    echo "MainActivity.java atualizado com sucesso!"
+    }' "$MAIN_ACTIVITY"
+    echo "✅ Método isDeviceRooted() adicionado!"
 else
-    echo "Erro: MainActivity.java não encontrado!"
-    exit 1
+    echo "⚠️ Método isDeviceRooted() já existe, ignorando..."
 fi
+
+echo "🔒 Segurança adicionada com sucesso ao MainActivity.java!"
