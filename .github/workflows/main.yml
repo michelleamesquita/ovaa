@@ -55,14 +55,20 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ovaa-app
+          path: app/build/outputs/apk/debug/app-debug.apk
+
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ovaa-app
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: ovaa-app-release
+          path: app/build/outputs/apk/release/app-release.apk
       
       - name: Upload Mapping File (ProGuard)
         uses: actions/upload-artifact@v4
@@ -201,20 +207,3 @@ jobs:
         with:
           name: DAST-Report
           path: dast_report.json
-
-      - name: Obter Relatório da Análise Dinâmica (PDF)
-        run: |
-          DAST_PDF_URL="${{ secrets.AWS_MOBSF_IP }}/api/v1/download_pdf"
-          API_KEY="${{ secrets.MOBSF_API_KEY }}"
-          RESPONSE=$(curl -X POST "$DAST_PDF_URL" -H "Authorization: $API_KEY" -d "hash=$SCAN_ID" --output dast_dynamic_report.pdf)
-          if [[ ! -f dast_dynamic_report.pdf ]]; then
-            echo "❌ Erro ao baixar o PDF da análise dinâmica"
-            exit 1
-          fi
-          echo "PDF da análise dinâmica baixado com sucesso."
-
-      - name: Upload Relatório da Análise Dinâmica (PDF)
-        uses: actions/upload-artifact@v4
-        with:
-          name: DAST-Dynamic-PDF-Report
-          path: dast_dynamic_report.pdf
