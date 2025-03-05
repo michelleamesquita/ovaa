@@ -36,8 +36,8 @@ buildTypes {
 -keep class oversecured.ovaa.activities.MainActivity { *; }
 
 # 🔒 Ofusca todas as classes do app, exceto as Activities
--keep public class * extends android.app.Activity
--dontwarn android.support.**
+-keep public class * extends android.app.Activity 
+-dontwarn android.support.*
 
 📌 Como testar se o código foi ofuscado?
 Gere a versão release do APK:
