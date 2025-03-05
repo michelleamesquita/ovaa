@@ -62,7 +62,10 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease -type f
+        run: | 
+          ./gradlew assembleRelease
+          find app/build/outputs -type f
+
 
       - name: Upload Realase Artifact
         uses: actions/upload-artifact@v4
