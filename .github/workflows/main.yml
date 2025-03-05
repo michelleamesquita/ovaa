@@ -50,11 +50,21 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ovaa-app
           path: app/build/outputs/apk/debug/app-debug.apk
+      
+            - name: Upload Mapping File (ProGuard)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ProGuard-Mapping
+          path: app/build/outputs/mapping/release/mapping.txt
+
   
   test_proguard:
     name: Teste de Ofuscação do ProGuard
