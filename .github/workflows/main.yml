@@ -77,6 +77,12 @@ jobs:
         with:
           name: ovaa-app
           path: app/build/outputs/apk/release/
+          
+      - name: Baixar ProGuard
+        uses: actions/download-artifact@v4
+        with:
+          name: ProGuard-Mapping
+          path: app/build/outputs/mapping/release/mapping.txt
 
       - name: Verificar se ProGuard está Ativo
         run: |
@@ -97,12 +103,6 @@ jobs:
           else
             echo "✅ O código foi ofuscado corretamente!"
           fi
-
-      - name: Upload Mapping File
-        uses: actions/upload-artifact@v4
-        with:
-          name: ProGuard-Mapping
-          path: app/build/outputs/mapping/release/mapping.txt
 
 
   security_scan:
