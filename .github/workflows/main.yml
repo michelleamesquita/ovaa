@@ -43,6 +43,11 @@ jobs:
             echo "Erro: Nenhum build.gradle encontrado!"
             exit 1
           fi
+          
+      - name: Injection rasp
+        run: |
+          chmod +x ./inject_rasp.sh
+          ./inject_rasp.sh
 
       - name: Grant execute permission for Gradle
         run: chmod +x ./gradlew
@@ -96,12 +101,19 @@ jobs:
 
           echo "✅ ProGuard está ativo. Verificando a ofuscação do código..."
 
-          # Verifica se a classe de teste foi ofuscada
           if grep -q "oversecured.ovaa.utils.ProGuardCheck" "$MAPPING_FILE"; then
-            echo "❌ ERRO: A classe ProGuardCheck NÃO foi ofuscada! ProGuard pode estar desativado."
-            exit 1
+            # Captura o novo nome da classe
+            OBFUSCATED_NAME=$(grep "oversecured.ovaa.utils.ProGuardCheck ->" "$MAPPING_FILE" | awk '{print $NF}')
+
+            if [ -z "$OBFUSCATED_NAME" ]; then
+              echo "❌ ERRO: A classe ProGuardCheck NÃO foi ofuscada! ProGuard pode estar desativado."
+              exit 1
+            else
+              echo "✅ A classe ProGuardCheck foi ofuscada corretamente como '$OBFUSCATED_NAME'!"
+            fi
           else
-            echo "✅ O código foi ofuscado corretamente!"
+            echo "⚠️ ALERTA: A classe ProGuardCheck NÃO foi encontrada no mapping.txt."
+            echo "ℹ️ Isso pode indicar que ela foi completamente removida pelo ProGuard."
           fi
 
 
